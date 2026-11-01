@@ -1,0 +1,3 @@
+Öğrenci: ogrenci1@teztakip.edu.tr, şifre Sifre123
+Danışman: danisman1@teztakip.edu.tr, şifre Sifre123
+Yönetici: admin@teztakip.edu.tr, şifre Sifre123

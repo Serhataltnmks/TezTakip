@@ -1,0 +1,189 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                  String    @id @default(cuid())
+  email               String    @unique
+  passwordHash        String
+  firstName           String
+  lastName            String
+  role                String
+  isActive            Boolean   @default(true)
+  resetToken          String?
+  resetTokenExpiresAt DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  studentProfile StudentProfile?
+  advisorProfile AdvisorProfile?
+  comments       Comment[]
+  notifications  Notification[]
+}
+
+model Department {
+  id        String   @id @default(cuid())
+  name      String
+  code      String   @unique
+  createdAt DateTime @default(now())
+
+  students StudentProfile[]
+  advisors AdvisorProfile[]
+}
+
+model AcademicTerm {
+  id        String   @id @default(cuid())
+  name      String
+  isActive  Boolean  @default(false)
+  startDate DateTime
+  endDate   DateTime
+  createdAt DateTime @default(now())
+}
+
+model StudentProfile {
+  id           String  @id @default(cuid())
+  userId       String  @unique
+  studentNo    String  @unique
+  level        String
+  departmentId String
+  advisorId    String?
+
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  department  Department          @relation(fields: [departmentId], references: [id])
+  advisor     AdvisorProfile?     @relation("AdvisorStudents", fields: [advisorId], references: [id])
+  preferences AdvisorPreference[]
+  thesis      Thesis?
+}
+
+model AdvisorProfile {
+  id              String  @id @default(cuid())
+  userId          String  @unique
+  title           String
+  departmentId    String
+  expertise       String
+  quotaLisans     Int
+  quotaYL         Int
+  officeHours     String?
+  approvalStatus  String  @default("BEKLIYOR")
+  rejectionReason String?
+
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  department  Department          @relation(fields: [departmentId], references: [id])
+  students    StudentProfile[]    @relation("AdvisorStudents")
+  preferences AdvisorPreference[]
+}
+
+model AdvisorPreference {
+  id          String    @id @default(cuid())
+  studentId   String
+  advisorId   String
+  rank        Int
+  note        String?
+  status      String    @default("BEKLIYOR")
+  offeredAt   DateTime?
+  respondedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  student StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  advisor AdvisorProfile @relation(fields: [advisorId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, rank])
+  @@index([advisorId, status])
+}
+
+model Thesis {
+  id               String    @id @default(cuid())
+  studentId        String    @unique
+  title            String?
+  abstract         String?
+  stage            String    @default("DANISMAN_SECIMI")
+  revisionNote     String?
+  titleSubmittedAt DateTime?
+  updatedAt        DateTime  @updatedAt
+
+  student   StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  documents Document[]
+  deadlines Deadline[]
+  meetings  Meeting[]
+}
+
+model Document {
+  id             String   @id @default(cuid())
+  thesisId       String
+  type           String
+  title          String
+  description    String?
+  currentVersion Int      @default(1)
+  createdAt      DateTime @default(now())
+
+  thesis   Thesis            @relation(fields: [thesisId], references: [id], onDelete: Cascade)
+  versions DocumentVersion[]
+}
+
+model DocumentVersion {
+  id           String   @id @default(cuid())
+  documentId   String
+  versionNo    Int
+  storedName   String
+  originalName String
+  mimeType     String
+  size         Int
+  status       String   @default("INCELENIYOR")
+  uploadedAt   DateTime @default(now())
+
+  document Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  comments Comment[]
+
+  @@unique([documentId, versionNo])
+}
+
+model Comment {
+  id                String   @id @default(cuid())
+  documentVersionId String
+  authorId          String
+  content           String
+  createdAt         DateTime @default(now())
+
+  documentVersion DocumentVersion @relation(fields: [documentVersionId], references: [id], onDelete: Cascade)
+  author          User            @relation(fields: [authorId], references: [id], onDelete: Cascade)
+}
+
+model Deadline {
+  id           String    @id @default(cuid())
+  thesisId     String
+  title        String
+  dueDate      DateTime
+  documentType String?
+
+  thesis Thesis @relation(fields: [thesisId], references: [id], onDelete: Cascade)
+}
+
+model Meeting {
+  id        String   @id @default(cuid())
+  thesisId  String
+  date      DateTime
+  subject   String
+  notes     String?
+  createdAt DateTime @default(now())
+
+  thesis Thesis @relation(fields: [thesisId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String
+  message   String
+  link      String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+}
